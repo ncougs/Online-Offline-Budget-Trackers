@@ -152,3 +152,33 @@ document.querySelector('#add-btn').onclick = function () {
 document.querySelector('#sub-btn').onclick = function () {
 	sendTransaction(false);
 };
+
+const saveRecord = (data) => {
+	const dbName = 'budgetTracker';
+	const version = 1;
+
+	const offlineDB = window.indexedDB.open(dbName, version);
+
+	// Create schema
+	offlineDB.onupgradeneeded = (e) => {
+		const db = e.target.result;
+
+		// Creates an object store
+		const budgetTrackerStrore = db.createObjectStore(dbName, {
+			autoIncrement: true,
+		});
+		// Create indexes to query on.
+		budgetTrackerStrore.createIndex('name', 'name');
+		budgetTrackerStrore.createIndex('value', 'value');
+		budgetTrackerStrore.createIndex('date', 'date');
+	};
+
+	offlineDB.onsuccess = (e) => {
+		const db = e.target.result;
+		const transaction = db.transaction([dbName], 'readwrite');
+		const dbStore = transaction.objectStore(dbName);
+
+		// Adds data to our objectStore
+		dbStore.add(data);
+	};
+};
