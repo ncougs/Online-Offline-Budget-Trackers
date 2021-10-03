@@ -137,7 +137,6 @@ function sendTransaction(isAdding) {
 		.catch((err) => {
 			// fetch failed, so save in indexed db
 			saveRecord(transaction);
-			//to complete save in indexdb
 
 			// clear form
 			nameEl.value = '';
@@ -182,3 +181,47 @@ const saveRecord = (data) => {
 		dbStore.add(data);
 	};
 };
+
+const restoreOfflineDB = async () => {
+	const dbName = 'budgetTracker';
+	const version = 1;
+
+	const offlineDB = window.indexedDB.open(dbName, version);
+
+	offlineDB.onsuccess = async (e) => {
+		const db = e.target.result;
+		const transaction = db.transaction([dbName], 'readwrite');
+		const dbStore = transaction.objectStore(dbName);
+
+		// Get all records from store and set to a variable
+		const getAll = dbStore.getAll();
+
+		getAll.onsuccess = async (e) => {
+			const result = e.target.result;
+
+			if (result.length > 0) {
+				// add data to online database
+				const request = await fetch('/api/transaction/bulk', {
+					method: 'POST',
+					body: JSON.stringify(result),
+					headers: {
+						Accept: 'application/json, text/plain, */*',
+						'Content-Type': 'application/json',
+					},
+				});
+
+				const response = await request.json();
+
+				console.log(response);
+
+				const newTransaction = db.transaction([dbName], 'readwrite');
+				const newDBStore = newTransaction.objectStore(dbName);
+
+				newDBStore.clear();
+			}
+		};
+	};
+};
+
+// Listen for app coming back online
+window.addEventListener('online', restoreOfflineDB);
